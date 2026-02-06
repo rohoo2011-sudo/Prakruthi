@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-offwhite: #F8F6F2;
+  --color-offwhiteWarm: #F2EFE8;
+  --color-darkgreen: #2D4A3E;
+  --color-darkgreenMuted: #4A6B5A;
+  --color-textPrimary: #1A1A1A;
+  --color-textSecondary: #5C5C5C;
+  --color-borderSoft: #E5E2DC;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'Lora', Georgia, serif;
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-softMd: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  background-color: var(--color-offwhite);
+  color: var(--color-textPrimary);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-serif);
+}
+
+@keyframes cart-drawer-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.cart-drawer-panel {
+  animation: cart-drawer-in 0.2s ease-out forwards;
+}
