@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { OrdersProvider } from './context/OrdersContext';
 import { ProductsProvider } from './context/ProductsContext';
@@ -9,6 +10,7 @@ import ProductsPage from './pages/ProductsPage';
 import CheckoutPage from './pages/CheckoutPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
+import LoginPage from './pages/LoginPage';
 import AdminLayout from './components/admin/AdminLayout';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -20,12 +22,13 @@ import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
 function App() {
   return (
-    <StoreProvider>
-      <ProductsProvider>
-        <OrdersProvider>
-          <CartProvider>
-            <BrowserRouter>
-              <Routes>
+    <AuthProvider>
+      <StoreProvider>
+        <ProductsProvider>
+          <OrdersProvider>
+            <CartProvider>
+              <BrowserRouter>
+                <Routes>
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route path="login" element={<AdminLoginPage />} />
@@ -42,13 +45,15 @@ function App() {
                   <Route path="checkout" element={<CheckoutPage />} />
                   <Route path="about" element={<AboutPage />} />
                   <Route path="contact" element={<ContactPage />} />
+                  <Route path="login" element={<LoginPage />} />
                 </Route>
-              </Routes>
-            </BrowserRouter>
-          </CartProvider>
-        </OrdersProvider>
-      </ProductsProvider>
-    </StoreProvider>
+                </Routes>
+              </BrowserRouter>
+            </CartProvider>
+          </OrdersProvider>
+        </ProductsProvider>
+      </StoreProvider>
+    </AuthProvider>
   );
 }
 

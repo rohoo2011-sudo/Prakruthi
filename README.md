@@ -1,3 +1,17 @@
+# Prakruthi Bull Driven Oil
+
+React + Vite frontend with Supabase (auth, Postgres, storage).
+
+## Supabase setup
+
+1. Create a project at [supabase.com](https://supabase.com) and copy **Project URL** and **anon key** (Project Settings → API).
+2. Add to `.env`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (see `.env.example`).
+3. Run the SQL in `supabase/migrations/001_schema.sql` in the Supabase SQL Editor (creates tables, RLS, store seed, profiles trigger).
+4. In Supabase Dashboard → Storage, create a **public** bucket named `product-images` (public read; allow authenticated uploads if you use RLS on storage).
+5. First admin: sign up via the app at `/admin/login`, then in Supabase Table Editor → `profiles` set `role = 'admin'` for that user’s row.
+
+---
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

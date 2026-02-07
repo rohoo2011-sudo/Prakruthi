@@ -1,5 +1,6 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import AdminGuard, { setAdminAuthenticated } from './AdminGuard';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import AdminGuard from './AdminGuard';
+import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { to: '/admin/dashboard', label: 'Dashboard' },
@@ -10,11 +11,13 @@ const navItems = [
 
 export default function AdminLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const isLogin = location.pathname.endsWith('/login');
 
-  const handleLogout = () => {
-    setAdminAuthenticated(false);
-    window.location.href = '/admin/login';
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/admin/login');
   };
 
   if (isLogin) {

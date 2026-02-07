@@ -1,29 +1,78 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 import { useStore } from '../../context/StoreContext';
-import AdminGuard, { isAdminAuthenticated, setAdminAuthenticated } from '../../components/admin/AdminGuard';
+import { useAuth } from '../../context/AuthContext';
+import AdminGuard from '../../components/admin/AdminGuard';
+
+function withTimeout(promise, ms, message = 'Request timed out. Please try again.') {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(message)), ms)
+    ),
+  ]);
+}
 
 export default function AdminLoginPage() {
   const { store } = useStore();
+  const { user, isAdmin, fetchProfile } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  if (isAdminAuthenticated()) {
+  if (user && isAdmin) {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const envEmail = import.meta.env.VITE_ADMIN_EMAIL ?? '';
-    const envPassword = import.meta.env.VITE_ADMIN_PASSWORD ?? '';
-    if (email === envEmail && password === envPassword) {
-      setAdminAuthenticated(true);
-      navigate('/admin/dashboard', { replace: true });
-    } else {
-      setError('Invalid email or password.');
+    setSubmitting(true);
+    const maxRetries = 2;
+    try {
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const { data, error: signInError } = await withTimeout(
+            supabase.auth.signInWithPassword({ email, password }),
+            15000,
+            'Login timed out. Please try again.'
+          );
+          if (signInError) {
+            setError(signInError.message || 'Invalid email or password.');
+            return;
+          }
+          if (data?.user) {
+            const profileData = await withTimeout(
+              fetchProfile(data.user.id),
+              10000,
+              'Loading profile timed out. Please try again.'
+            );
+            if (profileData?.role === 'admin') {
+              navigate('/admin/dashboard', { replace: true });
+              return;
+            }
+            await supabase.auth.signOut();
+            setError('Access denied. You are not an admin.');
+            return;
+          }
+        } catch (err) {
+          if (err?.name === 'AbortError' && attempt < maxRetries) {
+            await new Promise((r) => setTimeout(r, 500));
+            continue;
+          }
+          if (err?.name === 'AbortError') {
+            setError('Request was interrupted. Please try again.');
+          } else {
+            setError(err?.message || 'Login failed. Please try again.');
+          }
+          return;
+        }
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -69,9 +118,10 @@ export default function AdminLoginPage() {
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button
               type="submit"
-              className="w-full py-3 rounded-lg bg-darkgreen text-offwhite font-medium hover:bg-darkgreenMuted transition-colors min-h-[48px]"
+              disabled={submitting}
+              className="w-full py-3 rounded-lg bg-darkgreen text-offwhite font-medium hover:bg-darkgreenMuted transition-colors min-h-[48px] disabled:opacity-70"
             >
-              Log in
+              {submitting ? 'Logging in...' : 'Log in'}
             </button>
           </form>
         </div>

@@ -1,56 +1,101 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
-const STORAGE_KEY = 'prakruthi_orders';
+function rowToOrder(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    customerName: row.customer_name,
+    phone: row.phone ?? '',
+    street: row.street ?? '',
+    city: row.city ?? '',
+    state: row.state ?? '',
+    pincode: row.pincode ?? '',
+    items: row.items ?? [],
+    total: Number(row.total),
+    status: row.status ?? 'pending',
+    paid: row.paid === true,
+    modified: row.modified === true,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function orderToRow(order) {
+  return {
+    user_id: order.user_id ?? null,
+    customer_name: order.customerName ?? order.customer_name,
+    phone: order.phone ?? '',
+    street: order.street ?? '',
+    city: order.city ?? '',
+    state: order.state ?? '',
+    pincode: order.pincode ?? '',
+    items: order.items ?? [],
+    total: order.total ?? 0,
+    status: order.status ?? 'pending',
+    paid: order.paid === true,
+    modified: order.modified === true,
+    updated_at: new Date().toISOString(),
+  };
+}
 
 const OrdersContext = createContext(null);
 
-function loadOrders() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveOrders(orders) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-}
-
 export function OrdersProvider({ children }) {
-  const [orders, setOrders] = useState(loadOrders);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const loadOrders = useCallback(async () => {
+    const { data, error: e } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    setError(e?.message ?? null);
+    setOrders((data ?? []).map(rowToOrder));
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    saveOrders(orders);
-  }, [orders]);
+    loadOrders();
+  }, [loadOrders]);
 
   const getOrders = useCallback(() => orders, [orders]);
 
-  const addOrder = useCallback((order) => {
-    const newOrder = {
+  const addOrder = useCallback(async (order) => {
+    const row = orderToRow({
       ...order,
-      id: String(order.id ?? Date.now()),
-      createdAt: order.createdAt ?? new Date().toISOString(),
-      status: order.status ?? 'pending',
-      paid: order.paid ?? false,
-      modified: order.modified ?? false,
-    };
-    setOrders((prev) => [newOrder, ...prev]);
-    return newOrder.id;
-  }, []);
+      customerName: order.customerName ?? order.customer_name,
+      customer_name: order.customerName ?? order.customer_name,
+    });
+    const { data, error: e } = await supabase.from('orders').insert(row).select('id').single();
+    setError(e?.message ?? null);
+    if (data) {
+      await loadOrders();
+      return data.id;
+    }
+    return null;
+  }, [loadOrders]);
 
-  const updateOrder = useCallback((id, updates) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === String(id) ? { ...o, ...updates } : o))
-    );
-  }, []);
+  const updateOrder = useCallback(async (id, updates) => {
+    const o = orders.find((x) => x.id === id);
+    if (!o) return;
+    const next = { ...o, ...updates };
+    const row = orderToRow(next);
+    const { error: e } = await supabase.from('orders').update(row).eq('id', id);
+    setError(e?.message ?? null);
+    if (!e) setOrders((prev) => prev.map((x) => (x.id === id ? next : x)));
+  }, [orders, loadOrders]);
 
-  const deleteOrder = useCallback((id) => {
-    setOrders((prev) => prev.filter((o) => o.id !== String(id)));
+  const deleteOrder = useCallback(async (id) => {
+    const { error: e } = await supabase.from('orders').delete().eq('id', id);
+    setError(e?.message ?? null);
+    if (!e) setOrders((prev) => prev.filter((o) => o.id !== id));
   }, []);
 
   const getOrder = useCallback(
-    (id) => orders.find((o) => o.id === String(id)) ?? null,
+    (id) => orders.find((o) => o.id === id) ?? null,
     [orders]
   );
 
@@ -58,11 +103,14 @@ export function OrdersProvider({ children }) {
     <OrdersContext.Provider
       value={{
         orders,
+        loading,
+        error,
         getOrders,
         getOrder,
         addOrder,
         updateOrder,
         deleteOrder,
+        loadOrders,
       }}
     >
       {children}

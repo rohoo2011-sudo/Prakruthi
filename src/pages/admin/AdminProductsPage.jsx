@@ -19,34 +19,41 @@ export default function AdminProductsPage() {
         <p className="text-textSecondary">No products. Add one to get started.</p>
       ) : (
         <ul className="space-y-3">
-          {products.map((p) => (
-            <li key={p.id}>
-              <Link
-                to={`/admin/products/${p.id}`}
-                className={`block p-4 rounded-xl border transition-colors ${
-                  (p.stock ?? 0) === 0 ? 'border-darkgreen/40 bg-offwhiteWarm' : 'border-borderSoft bg-offwhite'
-                }`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-textPrimary truncate">{p.name}</p>
-                    <p className="text-sm text-textSecondary">
-                      Stock: {p.stock ?? 0} · ₹{p.price} · {(p.stock ?? 0) > 0 && p.inStock !== false ? 'In stock' : 'Sold out'}
-                    </p>
+          {products.map((p) => {
+            const variantCount = p.variants?.length ?? 0;
+            const summary = variantCount > 1
+              ? `Variants: ${variantCount} · From ₹${p.price} · Stock: ${p.stock ?? 0}`
+              : `Stock: ${p.stock ?? 0} · ₹${p.price}`;
+            const inStock = p.inStock !== false;
+            return (
+              <li key={p.id}>
+                <Link
+                  to={`/admin/products/${p.id}`}
+                  className={`block p-4 rounded-xl border transition-colors ${
+                    !inStock ? 'border-darkgreen/40 bg-offwhiteWarm' : 'border-borderSoft bg-offwhite'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-textPrimary truncate">{p.name}</p>
+                      <p className="text-sm text-textSecondary">
+                        {summary} · {inStock ? 'In stock' : 'Sold out'}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-sm font-medium px-2 py-1 rounded border ${
+                        inStock
+                          ? 'bg-offwhiteWarm text-darkgreen border-borderSoft'
+                          : 'bg-offwhiteWarm text-textSecondary border-borderSoft'
+                      }`}
+                    >
+                      {inStock ? 'In stock' : 'Sold out'}
+                    </span>
                   </div>
-                  <span
-                    className={`text-sm font-medium px-2 py-1 rounded border ${
-                      (p.stock ?? 0) > 0 && p.inStock !== false
-                        ? 'bg-offwhiteWarm text-darkgreen border-borderSoft'
-                        : 'bg-offwhiteWarm text-textSecondary border-borderSoft'
-                    }`}
-                  >
-                    {(p.stock ?? 0) > 0 && p.inStock !== false ? 'In stock' : 'Sold out'}
-                  </span>
-                </div>
-              </Link>
-            </li>
-          ))}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

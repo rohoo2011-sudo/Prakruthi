@@ -22,7 +22,7 @@ export default function ProductsPage() {
       );
     }
     return list;
-  }, [category, search]);
+  }, [products, category, search]);
 
   return (
     <main className="min-h-[60vh] py-8 px-4 sm:px-6">

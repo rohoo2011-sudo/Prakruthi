@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useOrders } from '../context/OrdersContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function CheckoutPage() {
   const { items, totalAmount, clearCart } = useCart();
   const { addOrder } = useOrders();
+  const { user } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
     name: '',
@@ -30,10 +32,11 @@ export default function CheckoutPage() {
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     const order = {
+      user_id: user?.id ?? null,
       customerName: form.name.trim(),
       phone: form.phone.trim(),
       street: form.street.trim(),
@@ -50,7 +53,7 @@ export default function CheckoutPage() {
       })),
       total: totalAmount,
     };
-    addOrder(order);
+    await addOrder(order);
     clearCart();
     setSubmitted(true);
   };

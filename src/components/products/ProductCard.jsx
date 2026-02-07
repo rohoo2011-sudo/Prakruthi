@@ -1,19 +1,40 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useCart } from '../../context/CartContext';
 
+function getVariants(product) {
+  const raw = product.variants;
+  if (Array.isArray(raw) && raw.length > 0) return raw;
+  return [{ id: 'default', label: 'Default', price: product.price ?? 0, stock: product.stock }];
+}
+
+function isVariantAvailable(v) {
+  if (v.stock === undefined || v.stock === null) return true;
+  return (v.stock ?? 0) > 0;
+}
+
 export default function ProductCard({ product, compact = false }) {
-  const [selectedVariant, setSelectedVariant] = useState(product.variants[0]);
+  const variants = useMemo(() => getVariants(product), [product]);
+  const availableVariants = useMemo(() => variants.filter(isVariantAvailable), [variants]);
+  const firstAvailable = availableVariants[0];
+  const [selectedVariant, setSelectedVariant] = useState(() => firstAvailable ?? variants[0]);
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
 
+  const selectedAvailable = isVariantAvailable(selectedVariant);
+  const displayPrice = variants.length > 1
+    ? Math.min(...variants.map((v) => v.price || 0))
+    : (selectedVariant?.price ?? product.price ?? 0);
+
   const handleAddToCart = () => {
-    if (!product.inStock) return;
+    const variant = selectedAvailable ? selectedVariant : firstAvailable;
+    if (!variant || !product.inStock) return;
+    if (variants.some((v) => v.stock !== undefined) && !isVariantAvailable(variant)) return;
     addItem({
       productId: product.id,
-      variantId: selectedVariant.id,
-      variantLabel: selectedVariant.label,
+      variantId: variant.id,
+      variantLabel: variant.label,
       name: product.name,
-      price: selectedVariant.price,
+      price: variant.price,
       image: product.image,
       quantity,
     });
@@ -39,7 +60,7 @@ export default function ProductCard({ product, compact = false }) {
         <div className="p-4">
           <h3 className="font-medium text-textPrimary">{product.name}</h3>
           <p className="text-darkgreen font-medium mt-1">
-            {product.variants.length > 1 ? 'From ' : ''}₹{product.price}
+            {variants.length > 1 ? 'From ' : ''}₹{displayPrice}
           </p>
           {product.inStock && (
             <button
@@ -73,27 +94,23 @@ export default function ProductCard({ product, compact = false }) {
       </div>
       <div className="p-4 space-y-3">
         <h3 className="font-medium text-textPrimary">{product.name}</h3>
-        {product.variants.length > 1 ? (
-          <div>
-            <label className="text-sm text-textSecondary block mb-1">Variant</label>
-            <select
-              value={selectedVariant.id}
-              onChange={(e) => {
-                const v = product.variants.find((x) => x.id === e.target.value);
-                if (v) setSelectedVariant(v);
-              }}
-              className="w-full rounded-lg border border-borderSoft bg-offwhite px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-darkgreen focus:border-transparent"
-            >
-              {product.variants.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.label} — ₹{v.price}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <p className="text-darkgreen font-medium">₹{selectedVariant.price}</p>
-        )}
+        <div>
+          <label className="text-sm text-textSecondary block mb-1">Variant</label>
+          <select
+            value={selectedVariant?.id}
+            onChange={(e) => {
+              const v = variants.find((x) => x.id === e.target.value);
+              if (v) setSelectedVariant(v);
+            }}
+            className="w-full rounded-lg border border-borderSoft bg-offwhite px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-darkgreen focus:border-transparent"
+          >
+            {variants.map((v) => (
+              <option key={v.id} value={v.id} disabled={!isVariantAvailable(v)}>
+                {v.label} — ₹{v.price}{!isVariantAvailable(v) ? ' (Sold out)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-textSecondary">Qty</span>
           <div className="flex items-center border border-borderSoft rounded-lg overflow-hidden">
@@ -116,7 +133,7 @@ export default function ProductCard({ product, compact = false }) {
             </button>
           </div>
         </div>
-        {product.inStock ? (
+        {product.inStock && selectedAvailable ? (
           <button
             type="button"
             onClick={handleAddToCart}
@@ -124,6 +141,8 @@ export default function ProductCard({ product, compact = false }) {
           >
             Add to Cart
           </button>
+        ) : product.inStock && !selectedAvailable ? (
+          <p className="text-sm text-textSecondary py-2">Selected variant is sold out</p>
         ) : null}
       </div>
     </div>

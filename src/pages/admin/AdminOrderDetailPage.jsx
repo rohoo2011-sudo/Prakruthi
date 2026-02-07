@@ -1,14 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useOrders } from '../../context/OrdersContext';
 
 export default function AdminOrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getOrder, updateOrder, deleteOrder } = useOrders();
+  const { getOrder, updateOrder, deleteOrder, loading } = useOrders();
   const order = getOrder(id);
   const [items, setItems] = useState(order?.items ?? []);
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (order?.items) setItems(order.items);
+  }, [order?.id, order?.items]);
+
+  if (loading && !order) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        <p className="text-textSecondary">Loading…</p>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
